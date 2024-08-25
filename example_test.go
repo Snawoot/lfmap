@@ -25,3 +25,15 @@ func Example() {
 		fmt.Printf("key = %s, value = %d\n", k, v)
 	}
 }
+
+func ExampleMap_Transaction() {
+	m := lfmap.New[string, int]()
+
+	// Let's do a simple increment to illustrate transactions
+	key := "abc"
+	m.Transaction(func(t lfmap.Tx[string, int]) {
+		ctr, _ := t.Get(key)
+		t.Set(key, ctr+1)
+	})
+	fmt.Println(m.Get(key))
+}

@@ -26,4 +26,27 @@ func (m *Map[K, V]) Len(key K) int {
 }
 
 func (m *Map[K, V]) Transaction(txn func(t Tx[K, V])) {
+	m.c.Update(func(oldValue *immutable.Map[K, V]) *immutable.Map[K, V]{
+		t := tx[K, V]{oldValue}
+		txn(&t)
+		return t.m
+	})
+}
+
+func (m *Map[K, V]) Clear() {
+	m.Transaction(func(t Tx[K, V]) {
+		t.Clear()
+	})
+}
+
+func (m *Map[K, V]) Delete(key K) {
+	m.Transaction(func(t Tx[K, V]) {
+		t.Delete(key)
+	})
+}
+
+func (m *Map[K, V]) Set(key K, value V) {
+	m.Transaction(func(t Tx[K, V]) {
+		t.Set(key, value)
+	})
 }

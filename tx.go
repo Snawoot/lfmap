@@ -7,6 +7,7 @@ import (
 )
 
 type Tx[K comparable, V any] interface {
+	Clear()
 	Delete(key K)
 	Get(key K) (value V, ok bool)
 	Len() int
@@ -19,6 +20,10 @@ var _ iter.Seq2[string, string] = Tx[string, string](nil).Range
 
 type tx[K comparable, V any] struct {
 	m *immutable.Map[K, V]
+}
+
+func (t *tx[K, V]) Clear() {
+	t.m = immutable.NewMap[K, V](newHasher[K]())
 }
 
 func (t *tx[K, V]) Delete(key K) {

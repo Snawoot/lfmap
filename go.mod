@@ -8,4 +8,4 @@ require (
 	github.com/dolthub/maphash v0.1.0
 )
 
-require golang.org/x/exp v0.0.0-20220518171630-0b5c67f07fdf // indirect
+require golang.org/x/exp v0.0.0-20240823005443-9b4947da3948 // indirect

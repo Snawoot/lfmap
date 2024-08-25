@@ -16,7 +16,7 @@ type Tx[K comparable, V any] interface {
 }
 
 var _ Tx[string, string] = &tx[string, string]{}
-var _ iter.Seq2[string, string] = Tx[string, string](nil).Range
+var _ iter.Seq2[string, string] = (&tx[string, string]{}).Range
 
 type tx[K comparable, V any] struct {
 	m *immutable.Map[K, V]

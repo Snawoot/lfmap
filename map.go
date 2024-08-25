@@ -26,7 +26,7 @@ func (m *Map[K, V]) Len(key K) int {
 }
 
 func (m *Map[K, V]) Transaction(txn func(t Tx[K, V])) {
-	m.c.Update(func(oldValue *immutable.Map[K, V]) *immutable.Map[K, V]{
+	m.c.Update(func(oldValue *immutable.Map[K, V]) *immutable.Map[K, V] {
 		t := tx[K, V]{oldValue}
 		txn(&t)
 		return t.m
@@ -49,4 +49,8 @@ func (m *Map[K, V]) Set(key K, value V) {
 	m.Transaction(func(t Tx[K, V]) {
 		t.Set(key, value)
 	})
+}
+
+func (m *Map[K, V]) Range(yield func(key K, value V) bool) {
+	iterMap(m.c.Value(), yield)
 }

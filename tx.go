@@ -43,11 +43,5 @@ func (t *tx[K, V]) Set(key K, value V) {
 }
 
 func (t *tx[K, V]) Range(yield func(key K, value V) bool) {
-	itr := t.m.Iterator()
-	for !itr.Done() {
-		k, v, _ := itr.Next()
-		if !yield(k, v) {
-			return
-		}
-	}
+	iterMap(t.m, yield)
 }

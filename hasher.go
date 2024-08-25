@@ -11,7 +11,7 @@ func newHasher[K comparable]() hasher[K] {
 }
 
 func (h hasher[K]) Hash(key K) uint32 {
-	return uint32(h.Hash(key))
+	return uint32(maphash.Hasher[K](h).Hash(key))
 }
 
 func (h hasher[K]) Equal(a, b K) bool {

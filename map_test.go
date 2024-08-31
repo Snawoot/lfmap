@@ -75,7 +75,7 @@ func BenchmarkLFMapGet(b *testing.B) {
 		func() *Map[int, int] {
 			m := New[int, int]()
 			// test 50% key miss
-			for i := 0; i < MAP_LOAD; i += 2 {
+			for i := 0; i < 2*MAP_LOAD; i += 2 {
 				m.Set(i, i)
 			}
 			return m
@@ -93,13 +93,13 @@ func BenchmarkSyncMapGet(b *testing.B) {
 		func() *sync.Map {
 			m := &sync.Map{}
 			// test 50% key miss
-			for i := 0; i < 2*MAP_LOAD; i++ {
+			for i := 0; i < 2*MAP_LOAD; i += 2 {
 				m.Store(i, i)
 			}
 			return m
 		},
 		func(b *testing.B, m *sync.Map, drain *any) {
-			for i := 0; i < b.N; i += 2 {
+			for i := 0; i < b.N; i++ {
 				*drain, _ = m.Load(i % (2 * MAP_LOAD))
 			}
 		},

@@ -2,7 +2,6 @@ package lfmap
 
 import (
 	"fmt"
-	"math/rand/v2"
 	"runtime"
 	"sync"
 	"testing"
@@ -30,18 +29,21 @@ func TestSmoke(t *testing.T) {
 	}
 }
 
-const MAP_LOAD = 100_000
+const MAP_LOAD = 1000_000
 
-func benchPar[T any](b *testing.B, factory func() T, f func(b *testing.B, m T)) {
+// dummy output variable to ensure invoked function are not optimized out
+var BenchDrain = make([]any, runtime.NumCPU())
+
+func benchPar[T any](b *testing.B, factory func() T, f func(b *testing.B, m T, drain *any)) {
 	m := factory()
 	b.ResetTimer()
 	var wg sync.WaitGroup
-	for range runtime.NumCPU() {
+	for drainIdx := range runtime.NumCPU() {
 		wg.Add(1)
-		go func() {
+		go func(drainIdx int) {
 			defer wg.Done()
-			f(b, m)
-		}()
+			f(b, m, &BenchDrain[drainIdx])
+		}(drainIdx)
 	}
 	wg.Wait()
 }
@@ -49,10 +51,9 @@ func benchPar[T any](b *testing.B, factory func() T, f func(b *testing.B, m T)) 
 func BenchmarkLFMapSet(b *testing.B) {
 	benchPar(b,
 		func() *Map[int, int] { return New[int, int]() },
-		func(b *testing.B, m *Map[int, int]) {
-			r := rand.New(&rand.PCG{})
+		func(b *testing.B, m *Map[int, int], _ *any) {
 			for i := 0; i < b.N; i++ {
-				m.Set(r.Int(), i)
+				m.Set(i%MAP_LOAD, i)
 			}
 		},
 	)
@@ -61,10 +62,9 @@ func BenchmarkLFMapSet(b *testing.B) {
 func BenchmarkSyncMapSet(b *testing.B) {
 	benchPar(b,
 		func() *sync.Map { return &sync.Map{} },
-		func(b *testing.B, m *sync.Map) {
-			r := rand.New(&rand.PCG{})
+		func(b *testing.B, m *sync.Map, _ *any) {
 			for i := 0; i < b.N; i++ {
-				m.Store(r.Int(), i)
+				m.Store(i%MAP_LOAD, i)
 			}
 		},
 	)
@@ -74,15 +74,15 @@ func BenchmarkLFMapGet(b *testing.B) {
 	benchPar(b,
 		func() *Map[int, int] {
 			m := New[int, int]()
-			for i := 0; i < MAP_LOAD; i++ {
+			// test 50% key miss
+			for i := 0; i < MAP_LOAD; i += 2 {
 				m.Set(i, i)
 			}
 			return m
 		},
-		func(b *testing.B, m *Map[int, int]) {
-			r := rand.New(&rand.PCG{})
+		func(b *testing.B, m *Map[int, int], drain *any) {
 			for i := 0; i < b.N; i++ {
-				_, _ = m.Get(r.IntN(MAP_LOAD))
+				*drain, _ = m.Get(i % (2 * MAP_LOAD))
 			}
 		},
 	)
@@ -92,21 +92,21 @@ func BenchmarkSyncMapGet(b *testing.B) {
 	benchPar(b,
 		func() *sync.Map {
 			m := &sync.Map{}
-			for i := 0; i < MAP_LOAD; i++ {
+			// test 50% key miss
+			for i := 0; i < 2*MAP_LOAD; i++ {
 				m.Store(i, i)
 			}
 			return m
 		},
-		func(b *testing.B, m *sync.Map) {
-			r := rand.New(&rand.PCG{})
-			for i := 0; i < b.N; i++ {
-				_, _ = m.Load(r.IntN(MAP_LOAD))
+		func(b *testing.B, m *sync.Map, drain *any) {
+			for i := 0; i < b.N; i += 2 {
+				*drain, _ = m.Load(i % (2 * MAP_LOAD))
 			}
 		},
 	)
 }
 
-func BenchmarkLFMapRange100000(b *testing.B) {
+func BenchmarkLFMapRange1000000(b *testing.B) {
 	benchPar(b,
 		func() *Map[int, int] {
 			m := New[int, int]()
@@ -115,7 +115,7 @@ func BenchmarkLFMapRange100000(b *testing.B) {
 			}
 			return m
 		},
-		func(b *testing.B, m *Map[int, int]) {
+		func(b *testing.B, m *Map[int, int], _ *any) {
 			for i := 0; i < b.N; i++ {
 				var ctr int
 				for _, _ = range m.Range {
@@ -129,7 +129,7 @@ func BenchmarkLFMapRange100000(b *testing.B) {
 	)
 }
 
-func BenchmarkSyncMapRange100000(b *testing.B) {
+func BenchmarkSyncMapRange1000000(b *testing.B) {
 	benchPar(b,
 		func() *sync.Map {
 			m := &sync.Map{}
@@ -138,7 +138,7 @@ func BenchmarkSyncMapRange100000(b *testing.B) {
 			}
 			return m
 		},
-		func(b *testing.B, m *sync.Map) {
+		func(b *testing.B, m *sync.Map, _ *any) {
 			for i := 0; i < b.N; i++ {
 				var ctr int
 				for _, _ = range m.Range {
